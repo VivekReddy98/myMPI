@@ -1,0 +1,18 @@
+Sample code for using bash scripting, and ssh to launch jobs on ARC nodes. These files are just to get you started if you are having issues.  Please modify them to suit your needs.
+
+Use simple_my_prun like you would prun. Enter the command
+
+	./simple_my_prun ./simple_app
+	
+to run simple_app across all nodes.
+
+
+
+simple_mpirun:
+-----------------
+Bash script that loops through the $SLURM_NODELIST, and runs a command via ssh (provided in the argument list)
+
+
+simple_app:
+-----------------
+A bash script that just outputs the nodes name to the screen.
