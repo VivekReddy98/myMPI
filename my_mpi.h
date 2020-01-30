@@ -43,6 +43,7 @@ extern char nameFILE[NODE_NAME_LEN];
 int MPI_Init(int argc, char **argv, int *rank, int *numproc);
 void error(const char *msg);
 void fileAsArray(char *filename, int numLines); // To read stuff from a line
-
-
+void printtIP(struct hostent* host);
+void *server_connection_handler(void *ptr); // Threaded Function used by pthread to create a server
+void *client_connection_handler(void *ptr); // Threaded Function used by pthread to create a client
 /* --------------------------------------------------------------- */

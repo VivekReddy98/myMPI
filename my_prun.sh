@@ -8,8 +8,6 @@ touch $CWD/nodefile.txt
 # Location of the nodefile.txt
 export NODEFILE=$CWD/nodefile.txt
 
-echo $CWD
-echo $NODEFILE
 # Parse $SLURM_NODELIST into an iterable list of node names
 echo $SLURM_NODELIST | tr -d c | tr -d [ | tr -d ] | perl -pe 's/(\d+)-(\d+)/join(",",$1..$2)/eg' | awk 'BEGIN { RS=","} { print "c"$1 }' > $NODEFILE
 
