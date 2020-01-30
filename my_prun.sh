@@ -8,6 +8,8 @@ touch $CWD/nodefile.txt
 # Location of the nodefile.txt
 export NODEFILE=$CWD/nodefile.txt
 
+echo $CWD
+echo $NODEFILE
 # Parse $SLURM_NODELIST into an iterable list of node names
 echo $SLURM_NODELIST | tr -d c | tr -d [ | tr -d ] | perl -pe 's/(\d+)-(\d+)/join(",",$1..$2)/eg' | awk 'BEGIN { RS=","} { print "c"$1 }' > $NODEFILE
 
@@ -22,7 +24,7 @@ done
 # For each item in the nodefile, connect via ssh and run the cmd.
 rank=0
 for currNode in `cat $NODEFILE`; do
-  ssh -n $currNode "$CWD/$CMD $rank $NP" & pid[$rank]=$!
+  ssh -n $currNode "$CWD/$CMD $rank $NP $NODEFILE" & pid[$rank]=$!  # Arguments for the executable are Rank, Num Processes, and the name of the nodefile
   (( rank++ ))
 done
 
@@ -32,7 +34,3 @@ for curNode in `cat $NODEFILE`; do
   wait ${pid[$rank]}
   (( rank++ ))
 done
-
-echo $NP
-echo $NODEFILE
-cat $NODEFILE
