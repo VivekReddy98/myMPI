@@ -23,7 +23,7 @@
 /* Array To store the names of nodes */
 extern char nodeNames[MAXCONNECT][NODE_NAME_LEN];
 
-extern pthread_t server_thread, client_thread;
+//extern pthread_t server_thread, client_thread;
 
 #ifndef RANK
 extern int RANK;
@@ -47,5 +47,5 @@ void error(const char *msg);
 void fileAsArray(char *filename, int numLines); // To read stuff from a line
 void printtIP(struct hostent* host);
 void *server_connection_handler(void *ptr); // Threaded Function used by pthread to create a server
-void *client_connection_handler(void *ptr); // Threaded Function used by pthread to create a client
+void *client_connection_handler(void *ptr , void *ptr2); // Threaded Function used by pthread to create a client
 /* --------------------------------------------------------------- */
