@@ -23,6 +23,8 @@
 /* Array To store the names of nodes */
 extern char nodeNames[MAXCONNECT][NODE_NAME_LEN];
 
+extern pthread_t server_thread, client_thread;
+
 #ifndef RANK
 extern int RANK;
 #endif

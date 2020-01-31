@@ -22,7 +22,7 @@ done
 # For each item in the nodefile, connect via ssh and run the cmd.
 rank=0
 for currNode in `cat $NODEFILE`; do
-  ssh -n $currNode "$CWD/$CMD $rank $NP $NODEFILE" & pid[$rank]=$!  # Arguments for the executable are Rank, Num Processes, and the name of the nodefile
+  ssh -n $currNode "cd $CWD;$CMD $rank $NP $NODEFILE" & pid[$rank]=$!  # Arguments for the executable are Rank, Num Processes, and the name of the nodefile
   (( rank++ ))
 done
 
