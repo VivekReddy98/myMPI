@@ -53,8 +53,10 @@ void error(const char *msg);
 void fileAsArray(char *filename, int numLines); // To read stuff from a line
 void printtIP(struct hostent* host);
 void *server_connection_handler(void *ptr); // Threaded Function used by pthread to create a server
-void *client_connection_handler(void *ptr , void *ptr2); // Threaded Function used by pthread to create a client
-struct sockaddr_in * getServerAddr(int rank)
-void startServer(struct sockaddr_in *serv_addr)
-int getRankFromIPaddr(struct sockaddr_in *serv_addr) // To get the rank of the connection from a recieved Node.
+void *client_connection_handler(void *ptr); // Threaded Function used by pthread to create a client
+struct sockaddr_in getServerAddr(int rank);
+void startServer(struct sockaddr_in serv_addr);
+int getRankFromIPaddr(struct sockaddr_in *serv_addr); // To get the rank of the connection from a recieved Node.
+void shutdownServer();
+void shutdownClient();
 /* --------------------------------------------------------------- */

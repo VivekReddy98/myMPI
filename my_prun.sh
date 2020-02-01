@@ -15,9 +15,9 @@ echo $SLURM_NODELIST | tr -d c | tr -d [ | tr -d ] | perl -pe 's/(\d+)-(\d+)/joi
 NP=$(wc -l < $NODEFILE)
 
 # Kill all the existing processes of this particular executable.
-#for currNode in `cat $NODEFILE`; do
- # ssh -n $currNode "killall -9 $CMD" &
-#done
+for currNode in `cat $NODEFILE`; do
+  ssh -n $currNode "killall -9 $CMD" &
+done
 
 
 echo $CWD

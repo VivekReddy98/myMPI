@@ -1,6 +1,6 @@
 
 mpi:
-	gcc -w -lpthread my_mpi.c -o my_mpi.elf
+	gcc -w -lpthread my_mpi.c my_mpi_extra.c -o my_mpi.elf
 
 run:
 	./my_prun.sh ./my_mpi.elf
