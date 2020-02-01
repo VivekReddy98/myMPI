@@ -11,15 +11,7 @@
 #include <arpa/inet.h>
 #include "my_mpi.h"
 
-// extern char nodeNames[MAXCONNECT][NODE_NAME_LEN];
-// extern int RANK;
-// extern int NUMPROC;
-// extern char nameFILE[NODE_NAME_LEN];
-// extern pthread_t server_thread;
-// extern int MAXCLIENTFD;
-//
-// extern int clientFd[MAXCONNECT];
-// extern int serverFd[MAXCONNECT];
+// Helper Functions for core MPI Functions
 
 void error(const char *msg) {
     perror(msg);
@@ -130,4 +122,135 @@ void shutdownClient(){
        close(serverFd[i]);
     }
     //close(serverFd[RANK]);
+}
+
+void *client_connection_handler(void *ptr, int odd) {
+
+  int rank_server = 0;
+  int offset = 2;
+
+  if (odd){
+     rank_server = 1;
+  }
+
+  struct sockaddr_in serv_addr;
+
+  for( ; rank_server < NUMPROC; rank_server += offset){
+    if (rank_server == RANK) continue;
+
+    serv_addr = getServerAddr(rank_server); // Get the Server Address
+    clientFd[rank_server] = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (clientFd[rank_server] < 0) error("ERROR opening socket");
+
+    int connect_err = -1;
+    int limit = 0;
+    while (connect_err < 0){
+      connect_err = connect(clientFd[rank_server], (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+
+      if (connect_err < 0) {
+        //perror("Error in connecting to the server: ");
+      }
+      else{
+        //printf("Connected to server, socket fd is %d , ip is : %s , port : %d, Rank: %d\n" , clientFd[rank_server] , inet_ntoa(serv_addr.sin_addr) , ntohs(serv_addr.sin_port), RANK);
+        //
+        break;
+      }
+      sleep(1);
+      limit++;
+      if(limit > 10){
+        printf("Connection with Server of the Node: %d did not happen at RANK: %d", rank_server, RANK);
+        fflush(stdout);
+        break;
+      }
+    }
+  }
+
+  // printf("Connected With all the servers!!!!!!!!!!!!!! %d\n", RANK);
+  // fflush(stdout);
+
+  return NULL;
+  //pthread_exit(NULL);
+}
+
+void *server_connection_handler(void *ptr) {
+
+    //Get the socket descriptor
+    struct sockaddr_in client_addr;
+    bzero((char *) &client_addr, sizeof(client_addr));
+    socklen_t clilen = sizeof(client_addr);
+
+    int accept_sockfd;
+
+    //set of socket descriptors
+    fd_set readfds;
+
+    // Clear FD_Sets;
+    FD_ZERO(&readfds);
+
+      FD_SET(clientFd[RANK], &readfds);
+
+    MAXCLIENTFD = clientFd[RANK];
+
+    int numConnectionsEstablished = 1;
+
+    int activity, sd, i;
+
+    while(1){
+
+      // Clear FD_Sets;
+      FD_ZERO(&readfds);
+
+      FD_SET(clientFd[RANK], &readfds);
+
+      MAXCLIENTFD = clientFd[RANK];
+
+      //add child sockets to set
+      for ( i = 0 ; i < NUMPROC ; i++)
+      {
+          //socket descriptor
+    			sd = clientFd[i];
+
+    			//if valid socket descriptor then add to read list
+    			if(sd > 0)
+    				FD_SET(sd , &readfds);
+
+          //highest file descriptor number, need it for the select function
+          if(sd > MAXCLIENTFD)
+    				MAXCLIENTFD = sd;
+      }
+
+      //*CLIENTSTART = 1;
+      activity = select( MAXCLIENTFD + 1 , &readfds , NULL , NULL , NULL);  // Wait indefinitely till some activity is found on the Master Socket.
+
+      if (activity < 0)  perror("select error");
+
+      //printf("In Server !!!!!!!!!!!! %d\n", RANK);
+
+      if (FD_ISSET(clientFd[RANK], &readfds)){
+        accept_sockfd = accept(clientFd[RANK], (struct sockaddr *)&client_addr, &clilen);
+        if (accept_sockfd < 0) error("Error In Accepting Connections!!!!!!!!!!!");
+        printf("New connection , socket fd is %d , ip is : %s , Rank: %d\n" , accept_sockfd , inet_ntoa(client_addr.sin_addr), RANK);
+        int rk = getRankFromIPaddr(&client_addr);
+        clientFd[rk] = accept_sockfd;
+        if(accept_sockfd>MAXCLIENTFD){
+          MAXCLIENTFD = accept_sockfd;
+        }
+        numConnectionsEstablished++;
+
+      }
+
+      if (numConnectionsEstablished >= NUMPROC){
+        break;
+      }
+
+      sleep(0.5);
+
+    }
+
+    printf("ALL Client Connections have establihsed:, Rank %d server sleeping for now\n", RANK);
+    //free(client_message);
+    //close(accept_sockfd);
+    return NULL;
+    //pthread_exit(NULL);
 }
