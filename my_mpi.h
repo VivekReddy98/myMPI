@@ -29,11 +29,9 @@ extern char nodeNames[MAXCONNECT][NODE_NAME_LEN];
 extern int serverFd[MAXCONNECT];
 extern int clientFd[MAXCONNECT];
 
-extern pthread_t server_starting_thread;
+extern pthread_t server_thread;
 extern pthread_cond_t cv_server_sync;
 extern pthread_mutex_t m_server_sync;
-
-extern int CLIENTSTART;
 
 #ifndef RANK
 extern int RANK;
@@ -54,6 +52,7 @@ extern int MAXCLIENTFD;
 /* --------------------------------------------------------------- */
 
 
+/* --------------------Function Declarations here --------------- */
 /* --------------------Function Declarations here --------------- */
 /* Helper Functions */
 void error(const char *msg);

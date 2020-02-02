@@ -21,13 +21,14 @@ pthread_t server_starting_thread, client_thread;
 pthread_cond_t cv_server_sync = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t m_server_sync = PTHREAD_MUTEX_INITIALIZER;
 
-int clientFd[MAXCONNECT]; // Used by the Client
-int serverFd[MAXCONNECT]; // Used by Server
+int clientFd[MAXCONNECT]; // Used by Server
+int serverFd[MAXCONNECT]; // Used by the Client
 
 int *SERVERHALT;
 int CLIENTSTART;
 
-char sysBuffer[MAXMSGSIZE];
+pthread_cond_t cv_server_sync = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t m_server_sync = PTHREAD_MUTEX_INITIALIZER;
 
 int MPI_Init(int argc, char **argv, int *rank, int *numproc) {
 
@@ -71,82 +72,26 @@ int MPI_Init(int argc, char **argv, int *rank, int *numproc) {
       client_connection_handler(NULL, 0);
   }
   else{
-      client_connection_handler(NULL, 1);
+   client_connection_handler(NULL, 1);
   }
 
-  pthread_cancel(server_starting_thread);
+  //pthread_join(&server_thread, NULL);
 
+  int i=0;
+  while(i<10){
+    sleep(1);
+    i++;
+  }
+
+  pthread_cancel(server_thread);
+  free(CLIENTSTART);
   return 0;
 }
 
-int MPI_Sendrecv(void *sendbuf, int sendcount, int send_sizeofDtype, int dest, int tag, void *recvbuf, int recvcount, int recv_sizeofDtype, int source, int recvtag){
-
-}
-
-void* server_read(void *ptr){
-
-  // while(TRUE)
-  // {
-  //   // Clear FD_Sets;
-  //   FD_ZERO(&readfds);
-  //
-  //   FD_SET(serverFd[RANK], &readfds);
-  //
-  //   MAXCLIENTFD = clientFd[RANK];
-  //
-  //   //add child sockets to set
-  //   for ( i = 0 ; i < NUMPROC ; i++)
-  //   {
-  //       //socket descriptor
-  //       sd = clientFd[i];
-  //
-  //       //if valid socket descriptor then add to read list
-  //       if(sd > 0)
-  //         FD_SET(sd , &readfds);
-  //
-  //       //highest file descriptor number, need it for the select function
-  //       if(sd > MAXCLIENTFD)
-  //         MAXCLIENTFD = sd;
-  //   }
-  //
-  //     //wait for an activity on one of the sockets , timeout is NULL , so wait indefinitely
-  //     activity = select( max_sd + 1 , &amp;readfds , NULL , NULL , NULL);
-  //
-  //     if ((activity &lt; 0) &amp;&amp; (errno!=EINTR))
-  //     {
-  //         printf(&quot;select error&quot;);
-  //     }
-  //
-  //
-  //     //else its some IO operation on some other socket :)
-  //     for (i = 0; i &lt; max_clients; i++)
-  //     {
-  //         sd = client_socket[i];
-  //
-  //         if (FD_ISSET( sd , &amp;readfds))
-  //         {
-  //             //Check if it was for closing , and also read the incoming message
-  //             if ((valread = read( sd , buffer, 1024)) == 0)
-  //             {
-  //                 //Somebody disconnected , get his details and print
-  //                 getpeername(sd , (struct sockaddr*)&amp;address , (socklen_t*)&amp;addrlen);
-  //                 printf(&quot;Host disconnected , ip %s , port %d \n&quot; , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
-  //
-  //                 //Close the socket and mark as 0 in list for reuse
-  //                 close( sd );
-  //                 client_socket[i] = 0;
-  //             }
-  //
-  //             //Echo back the message that came in
-  //             else
-  //             {
-  //                 //set the string terminating NULL byte on the end of the data read
-  //                 buffer[valread] = '&#92;&#48;';
-  //                 send(sd , buffer , strlen(buffer) , 0 );
-  //             }
-  //         }
-  //     }
-  // }
+int MPI_Finalize(){
+  shutdownServer();
+  shutdownClient();
+  return 0;
 }
 
 

@@ -146,12 +146,13 @@ void *client_connection_handler(void *ptr, int odd) {
     if (rank_server == RANK) continue;
 
     serv_addr = getServerAddr(rank_server); // Get the Server Address
+    serverFd[rank_server] = socket(AF_INET, SOCK_STREAM, 0);
 
+    if (serverFd[rank_server] < 0) error("ERROR opening socket");
 
     int connect_err = -1;
     int limit = 0;
     while (connect_err < 0){
-
       serverFd[rank_server] = socket(AF_INET, SOCK_STREAM, 0);
       if (serverFd[rank_server] < 0) error("ERROR opening socket");
 
