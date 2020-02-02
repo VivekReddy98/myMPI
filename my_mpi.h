@@ -15,6 +15,10 @@
 #ifndef SERVERPORT
 #define SERVERPORT 8989  // Server Port on every Node
 #endif
+
+#ifndef MAXMSGSIZE
+#define MAXMSGSIZE 2097153  // Max System Buffer size to recieve messages, 2 MB + 1 bytes.
+#endif
 /* --------------------------------------------------------------- */
 
 
@@ -25,7 +29,11 @@ extern char nodeNames[MAXCONNECT][NODE_NAME_LEN];
 extern int serverFd[MAXCONNECT];
 extern int clientFd[MAXCONNECT];
 
-extern pthread_t server_thread;
+extern pthread_t server_starting_thread;
+extern pthread_cond_t cv_server_sync;
+extern pthread_mutex_t m_server_sync;
+
+extern int CLIENTSTART;
 
 #ifndef RANK
 extern int RANK;
@@ -47,8 +55,7 @@ extern int MAXCLIENTFD;
 
 
 /* --------------------Function Declarations here --------------- */
-
-int MPI_Init(int argc, char **argv, int *rank, int *numproc);
+/* Helper Functions */
 void error(const char *msg);
 void fileAsArray(char *filename, int numLines); // To read stuff from a line
 void printtIP(struct hostent* host);
@@ -59,4 +66,9 @@ void startServer(struct sockaddr_in serv_addr);
 int getRankFromIPaddr(struct sockaddr_in *serv_addr); // To get the rank of the connection from a recieved Node.
 void shutdownServer();
 void shutdownClient();
+
+/* Core MPI Functions */
+int MPI_Init(int argc, char **argv, int *rank, int *numproc);
+int MPI_Sendrecv(void *sendbuf, int sendcount, int send_sizeofDtype, int dest, int tag, void *recvbuf, int recvcount, int recv_sizeofDtype, int source, int recvtag);
+int MPI_Finalize();
 /* --------------------------------------------------------------- */

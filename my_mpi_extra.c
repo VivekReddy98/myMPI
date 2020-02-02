@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #include "my_mpi.h"
 
 // Helper Functions for core MPI Functions
@@ -126,6 +127,12 @@ void shutdownClient(){
 
 void *client_connection_handler(void *ptr, int odd) {
 
+  pthread_mutex_lock(&m_server_sync);
+  while(CLIENTSTART == 0){
+       pthread_cond_wait(&cv_server_sync, &m_server_sync);
+  }
+  pthread_mutex_unlock(&m_server_sync);
+
   int rank_server = 0;
   int offset = 2;
 
@@ -139,28 +146,29 @@ void *client_connection_handler(void *ptr, int odd) {
     if (rank_server == RANK) continue;
 
     serv_addr = getServerAddr(rank_server); // Get the Server Address
-    clientFd[rank_server] = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (clientFd[rank_server] < 0) error("ERROR opening socket");
 
     int connect_err = -1;
     int limit = 0;
     while (connect_err < 0){
-      connect_err = connect(clientFd[rank_server], (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+
+      serverFd[rank_server] = socket(AF_INET, SOCK_STREAM, 0);
+      if (serverFd[rank_server] < 0) error("ERROR opening socket");
+
+      connect_err = connect(serverFd[rank_server], (struct sockaddr *) &serv_addr, sizeof(serv_addr));
 
       if (connect_err < 0) {
         //perror("Error in connecting to the server: ");
       }
       else{
         //printf("Connected to server, socket fd is %d , ip is : %s , port : %d, Rank: %d\n" , clientFd[rank_server] , inet_ntoa(serv_addr.sin_addr) , ntohs(serv_addr.sin_port), RANK);
-        //
         break;
       }
       sleep(1);
       limit++;
-      if(limit > 10){
-        printf("Connection with Server of the Node: %d did not happen at RANK: %d", rank_server, RANK);
-        fflush(stdout);
+      if(limit > 15){
+        printf("Connection with Server of the Node: %d did not happen at RANK: %d\n", rank_server, RANK);
+        //fflush(stdout);
         break;
       }
     }
@@ -188,7 +196,7 @@ void *server_connection_handler(void *ptr) {
     // Clear FD_Sets;
     FD_ZERO(&readfds);
 
-      FD_SET(clientFd[RANK], &readfds);
+    FD_SET(clientFd[RANK], &readfds);
 
     MAXCLIENTFD = clientFd[RANK];
 
@@ -197,6 +205,7 @@ void *server_connection_handler(void *ptr) {
     int activity, sd, i;
 
     while(1){
+
 
       // Clear FD_Sets;
       FD_ZERO(&readfds);
@@ -220,7 +229,11 @@ void *server_connection_handler(void *ptr) {
     				MAXCLIENTFD = sd;
       }
 
-      //*CLIENTSTART = 1;
+      pthread_mutex_lock(&m_server_sync);
+      CLIENTSTART = 1;
+      pthread_cond_signal(&cv_server_sync);
+      pthread_mutex_unlock(&m_server_sync);
+
       activity = select( MAXCLIENTFD + 1 , &readfds , NULL , NULL , NULL);  // Wait indefinitely till some activity is found on the Master Socket.
 
       if (activity < 0)  perror("select error");
