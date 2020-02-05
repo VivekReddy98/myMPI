@@ -100,19 +100,41 @@ int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, i
 
     if(pthread_create(&server_thread , NULL , server_listen_fd , (void *)&ind) < 0) error("Could Not create Server Thread");
 
-    int numWrite = write(serverFd[dest], sendbuf, sendcount);
-
     //printf("Number Bytes Written is %d\n", sendcount);
 
+    int numBytesSent = 0;
+
+    int numWrite;
+
+    // while(1)
+    // {
+    //   if (sendcount > MSG_SIZE){
+    //     numWrite = write(serverFd[dest], sendbuf+numBytesSent, MSG_SIZE);
+    //     if (numWrite <= 0) {error("Error in Writing to the socket!!!\n");}
+    //     else if (numWrite < sendcount) {
+    //        numBytesSent += numWrite;
+    //        wait(0.000001);
+    //        //printf("Not all the bytes have been written, requested for %d, but could only able to send %d\n", sendcount, numWrite);
+    //     }
+    //     else{
+    //       break;
+    //       //printf("SUCCESS at Client Side: Written %d Bytes, Rank: %d\n", sendcount, RANK);
+    //       //fflush(stdout);
+    //       //printf("Message Sent Was %s", sendbuf);
+    //     }
+    //   }
+    //   else{
+    //   }
+    // }
+
+    numWrite = write(serverFd[dest], sendbuf, sendcount);
     if (numWrite <= 0) {error("Error in Writing to the socket!!!\n");}
     else if (numWrite < sendcount) {
-       printf("Not all the bytes have been written, requested for %d, but could only able to send %d\n", sendcount, numWrite);
+       numBytesSent += numWrite;
+       wait(0.000001);
+       //printf("Not all the bytes have been written, requested for %d, but could only able to send %d\n", sendcount, numWrite);
     }
-    else{
-      printf("SUCCESS at Client Side: Written %d Bytes, Rank: %d\n", sendcount, RANK);
-      fflush(stdout);
-      //printf("Message Sent Was %s", sendbuf);
-    }
+    //break;
 
     pthread_mutex_lock(&m_server_sync);
     while(SERVERACK == 0){
@@ -128,11 +150,11 @@ int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, i
     else if (numWrite < ACK_SIZE) {
        printf("Not all the bytes have been written, requested for %d, but could only able to send %d", sendcount, numWrite);
     }
-    else{
-      printf("SUCCESS at Client Side: Sent the Acknowledgement\n", sendcount, RANK);
-      fflush(stdout);
-      //printf("Message Sent Was %s", sendbuf);
-    }
+    // else{
+    //   //printf("SUCCESS at Client Side: Sent the Acknowledgement\n", sendcount, RANK);
+    //   //fflush(stdout);
+    //   //printf("Message Sent Was %s", sendbuf);
+    // }
 
     pthread_mutex_lock(&m_server_sync);
     CLIENTSTART = 1;
@@ -251,31 +273,31 @@ int MPI_Barrier(){
 
 }
 
-int main(int argc, char **argv){
-
-    int rank;
-    int numproc;
-
-    MPI_Init(argc, argv, &rank, &numproc);
-
-    char msgPtr[65];
-    char rcvPtr[65];
-
-    memset(rcvPtr, 'L', 64*sizeof(char));
-    rcvPtr[64] = '\0';
-
-    if (rank%2 == 0){
-      memset(msgPtr, 'E', 64*sizeof(char));
-      msgPtr[64] = '\0';
-      MPI_Sendrecv(&msgPtr, 65, 1, rank+1, 1, &rcvPtr, 65, 1, rank+1, 1);
-    }
-    else{
-      memset(msgPtr, 'O', 64*sizeof(char));
-      msgPtr[64] = '\0';
-      MPI_Sendrecv(&msgPtr, 65, 1, rank-1, 1, &rcvPtr, 65, 1, rank-1, 1);
-    }
-
-    MPI_Finalize();
-
-
-}
+// int main(int argc, char **argv){
+//
+//     int rank;
+//     int numproc;
+//
+//     MPI_Init(argc, argv, &rank, &numproc);
+//
+//     char msgPtr[65];
+//     char rcvPtr[65];
+//
+//     memset(rcvPtr, 'L', 64*sizeof(char));
+//     rcvPtr[64] = '\0';
+//
+//     if (rank%2 == 0){
+//       memset(msgPtr, 'E', 64*sizeof(char));
+//       msgPtr[64] = '\0';
+//       MPI_Sendrecv(&msgPtr, 65, 1, rank+1, 1, &rcvPtr, 65, 1, rank+1, 1);
+//     }
+//     else{
+//       memset(msgPtr, 'O', 64*sizeof(char));
+//       msgPtr[64] = '\0';
+//       MPI_Sendrecv(&msgPtr, 65, 1, rank-1, 1, &rcvPtr, 65, 1, rank-1, 1);
+//     }
+//
+//     MPI_Finalize();
+//
+//
+// }

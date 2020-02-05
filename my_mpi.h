@@ -32,6 +32,10 @@
 #define ACK_SIZE 13  // ACK Message;
 #endif
 
+#ifndef MSG_SIZE
+#define MSG_SIZE 512  // ACK Message;
+#endif
+
 /* --------------------------------------------------------------- */
 typedef struct Index {
     //"real" grid indices

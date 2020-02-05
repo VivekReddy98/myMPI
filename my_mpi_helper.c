@@ -110,10 +110,8 @@ int getRankFromIPaddr(struct sockaddr_in *serv_addr){
 void shutdownServer(){
     int i;
     for (i = 0; i< NUMPROC; i++){
-       if(i==RANK) continue;
        close(clientFd[i]);
     }
-    close(clientFd[RANK]);
 }
 
 void shutdownClient(){
@@ -252,7 +250,7 @@ void *server_connection_handler(void *ptr) {
 
     }
 
-    printf("ALL Client Connections have establihsed:, Rank %d server sleeping for now\n", RANK);
+    //printf("ALL Client Connections have establihsed:, Rank %d server sleeping for now\n", RANK);
     //free(client_message);
     //close(accept_sockfd);
     return NULL;
@@ -277,14 +275,18 @@ void *server_listen_fd(void *ind){
 
     while(1) {
 
-        i = read(fd+numBytesRead, rcvBuff, recvcount);
+        i = read(fd, rcvBuff+numBytesRead, recvcount);
 
         if (i>0){
           recvcount -= i;
           numBytesRead += i;
           if (numBytesRead >= recvcount) {
-            printf("SUCESS: Was able to read %d bytes %d \n", numBytesRead, RANK);
+            //printf("SUCESS: Was able to read %d bytes %d \n", numBytesRead, RANK);
             break;
+          }
+          else{
+            numBytesRead += i;
+            wait(0.000001);
           }
         }
 
@@ -296,7 +298,7 @@ void *server_listen_fd(void *ind){
         }
     }
 
-    printf("Message Recieved Was: %s\n", rcvBuff);
+    //printf("Message Recieved Was: %s\n", rcvBuff);
     fflush(stdout);
 
     pthread_mutex_lock(&m_server_sync);
@@ -312,12 +314,12 @@ void *server_listen_fd(void *ind){
 
     i = read(fd, rcvBuff, ACK_SIZE);
 
-    printf("%s\n", rcvBuff);
-
-    if (i > ACK_SIZE){
-        printf("Acknowledgement Recieved!! Aborting the execution \n");
-        fflush(stdout);
-    }
+    //printf("%s\n", rcvBuff);
+    //
+    // if (i > ACK_SIZE){
+    //     printf("Acknowledgement Recieved!! Aborting the execution \n");
+    //     fflush(stdout);
+    // }
 
     pthread_exit(NULL);
 }
