@@ -139,7 +139,6 @@ int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, i
     pthread_cond_signal(&cv_server_sync);
     pthread_mutex_unlock(&m_server_sync);
 
-
     void * ptr = NULL;
     pthread_join(server_thread, &ptr);
 
