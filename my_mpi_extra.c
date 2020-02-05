@@ -244,7 +244,7 @@ void *server_connection_handler(void *ptr) {
       if (FD_ISSET(clientFd[RANK], &readfds)){
         accept_sockfd = accept(clientFd[RANK], (struct sockaddr *)&client_addr, &clilen);
         if (accept_sockfd < 0) error("Error In Accepting Connections!!!!!!!!!!!");
-        printf("New connection , socket fd is %d , ip is : %s , Rank: %d\n" , accept_sockfd , inet_ntoa(client_addr.sin_addr), RANK);
+        //printf("New connection , socket fd is %d , ip is : %s , Rank: %d\n" , accept_sockfd , inet_ntoa(client_addr.sin_addr), RANK);
         int rk = getRankFromIPaddr(&client_addr);
         clientFd[rk] = accept_sockfd;
         if(accept_sockfd>MAXCLIENTFD){
@@ -267,4 +267,67 @@ void *server_connection_handler(void *ptr) {
     //close(accept_sockfd);
     return NULL;
     //pthread_exit(NULL);
+}
+
+void *server_listen_fd(void *ind){
+
+    IndexStore* in = (IndexStore *)ind;
+
+    int src = in->src;
+    char *rcvBuff = in->rcvBuff;
+    int recvcount = in->recvcount;
+
+    fflush(stdout);
+    int fd = clientFd[src];
+
+    if (fd <= 0) error("No Connection established between my rank of %d and other node of %d");
+
+    int numBytesRead = 0;
+    int i;
+
+    while(1) {
+
+        i = read(fd+numBytesRead, rcvBuff, recvcount);
+
+        if (i>0){
+          recvcount -= i;
+          numBytesRead += i;
+          if (numBytesRead >= recvcount) {
+            printf("SUCESS: Was able to read %d bytes %d \n", numBytesRead, RANK);
+            break;
+          }
+        }
+
+        if (i <= 0 && errno == ETIMEDOUT) {
+          continue;
+        }
+        else if (i <= 0 && errno != ETIMEDOUT){
+           error("Something Wrong with the Connection\n");
+        }
+    }
+
+    printf("Message Recieved Was: %s\n", rcvBuff);
+    fflush(stdout);
+
+    pthread_mutex_lock(&m_server_sync);
+    SERVERACK = 1;
+    pthread_cond_signal(&cv_server_sync);
+    pthread_mutex_unlock(&m_server_sync);
+
+    pthread_mutex_lock(&m_server_sync);
+    while(CLIENTSTART == 0){
+        pthread_cond_wait(&cv_server_sync, &m_server_sync);
+    }
+    pthread_mutex_unlock(&m_server_sync);
+
+    i = read(fd, rcvBuff, ACK_SIZE);
+
+    printf("%s\n", rcvBuff);
+
+    if (i > ACK_SIZE){
+        printf("Acknowledgement Recieved!! Aborting the execution \n");
+        fflush(stdout);
+    }
+
+    pthread_exit(NULL);
 }

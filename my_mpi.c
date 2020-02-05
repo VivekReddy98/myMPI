@@ -17,14 +17,15 @@ int NUMPROC;
 int MAXCLIENTFD;
 char nameFILE[NODE_NAME_LEN];
 
-pthread_t server_starting_thread, client_thread;
-pthread_cond_t cv_server_sync = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t m_server_sync = PTHREAD_MUTEX_INITIALIZER;
+//char sysBuffer[BUFFSIZE];
+
+pthread_t server_thread, client_thread;
+
 
 int clientFd[MAXCONNECT]; // Used by Server
 int serverFd[MAXCONNECT]; // Used by the Client
 
-int *SERVERHALT;
+int SERVERACK;
 int CLIENTSTART;
 
 pthread_cond_t cv_server_sync = PTHREAD_COND_INITIALIZER;
@@ -32,8 +33,12 @@ pthread_mutex_t m_server_sync = PTHREAD_MUTEX_INITIALIZER;
 
 int MPI_Init(int argc, char **argv, int *rank, int *numproc) {
 
+  MAXCLIENTFD = 0;
 
-  CLIENTSTART = 0;
+  memset(clientFd, 0,  MAXCONNECT);
+  memset(serverFd, 0,  MAXCONNECT);
+
+  //SERVERHALT = 1;
 
   if(argc == 4) {
       RANK = atoi(argv[1]); //Rank of the node you are in.
@@ -53,16 +58,16 @@ int MPI_Init(int argc, char **argv, int *rank, int *numproc) {
 
   startServer(serv_addr); // Server Starts Listening. // Non-Blocking call so control returns immediately.
 
-  /* Server SetUp Code */  // printf("Address of the server: ip is : %s \n" , inet_ntoa(serv_addr.sin_addr));
-
   if (RANK%2 == 0){
-      if(pthread_create(&server_starting_thread , NULL , server_connection_handler , NULL) < 0) error("Could Not create Server Thread");
-      pthread_detach(server_starting_thread);
-      //client_connection_handler(NULL, 1);
+      if(pthread_create(&server_thread , NULL , server_connection_handler , NULL) < 0) error("Could Not create Server Thread");
+      //pthread_detach(server_thread);
+      sleep(2);
+      client_connection_handler(NULL, 1);
   }
   else{
-      // if(pthread_create(&server_starting_thread , NULL , server_connection_handler , NULL) < 0) error("Could Not create Server Thread");
-      // pthread_detach(server_starting_thread);
+      if(pthread_create(&server_thread , NULL , server_connection_handler , NULL) < 0) error("Could Not create Server Thread");
+      //pthread_detach(server_thread);
+      sleep(2);
       client_connection_handler(NULL, 0);
   }
 
@@ -72,20 +77,73 @@ int MPI_Init(int argc, char **argv, int *rank, int *numproc) {
       client_connection_handler(NULL, 0);
   }
   else{
-   client_connection_handler(NULL, 1);
+      client_connection_handler(NULL, 1);
   }
 
-  //pthread_join(&server_thread, NULL);
+  void * ptr = NULL;
+  pthread_join(server_thread, &ptr);
 
-  int i=0;
-  while(i<10){
-    sleep(1);
-    i++;
-  }
+  fflush(stdout);
 
-  pthread_cancel(server_thread);
-  free(CLIENTSTART);
   return 0;
+}
+
+int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, int tag, char *recvbuf, int recvcount, int recv_sizeofDtype, int source, int recvtag){
+
+    SERVERACK = 0;
+
+    CLIENTSTART = 0;
+
+    IndexStore ind = {source, recvbuf, recvcount};
+
+    //printf("\n%d, %d, %d\n", ind.src, ind.recvcount, RANK);
+
+    if(pthread_create(&server_thread , NULL , server_listen_fd , (void *)&ind) < 0) error("Could Not create Server Thread");
+
+    int numWrite = write(serverFd[dest], sendbuf, sendcount);
+
+    //printf("Number Bytes Written is %d\n", sendcount);
+
+    if (numWrite <= 0) {error("Error in Writing to the socket!!!\n");}
+    else if (numWrite < sendcount) {
+       printf("Not all the bytes have been written, requested for %d, but could only able to send %d\n", sendcount, numWrite);
+    }
+    else{
+      printf("SUCCESS at Client Side: Written %d Bytes, Rank: %d\n", sendcount, RANK);
+      fflush(stdout);
+      //printf("Message Sent Was %s", sendbuf);
+    }
+
+    pthread_mutex_lock(&m_server_sync);
+    while(SERVERACK == 0){
+        pthread_cond_wait(&cv_server_sync, &m_server_sync);
+    }
+    pthread_mutex_unlock(&m_server_sync);
+
+    char ack[] = ACK;
+
+    numWrite = write(serverFd[dest], ack, ACK_SIZE);
+
+    if (numWrite <= 0) {error("Error in Writing Acknoeledgement to the socket!!!\n");}
+    else if (numWrite < ACK_SIZE) {
+       printf("Not all the bytes have been written, requested for %d, but could only able to send %d", sendcount, numWrite);
+    }
+    else{
+      printf("SUCCESS at Client Side: Sent the Acknowledgement\n", sendcount, RANK);
+      fflush(stdout);
+      //printf("Message Sent Was %s", sendbuf);
+    }
+
+    pthread_mutex_lock(&m_server_sync);
+    CLIENTSTART = 1;
+    pthread_cond_signal(&cv_server_sync);
+    pthread_mutex_unlock(&m_server_sync);
+
+
+    void * ptr = NULL;
+    pthread_join(server_thread, &ptr);
+
+    return 0;
 }
 
 int MPI_Finalize(){
@@ -94,28 +152,131 @@ int MPI_Finalize(){
   return 0;
 }
 
+int MPI_Barrier(){
 
-int MPI_Finalize() {
-    shutdownServer();
-    shutdownClient();
-    return 0;
+  char readArr[] = "!Proceed!";
+  char msgArr[] = "!Proceed!";
+
+  if (RANK == 0) {
+
+      //set of socket descriptors
+      fd_set readfds;
+
+      int numAck, i, sd, activity;
+
+      int ackArr[NUMPROC];
+
+      memset(ackArr, 0, NUMPROC*sizeof(int));
+
+      numAck = 1;
+
+      ackArr[RANK] = 1;
+
+      while(1)
+      {
+          // Clear FD_Sets;
+          FD_ZERO(&readfds);
+
+          int MAXCLIENTFD;
+
+          for ( i = 0 ; i < NUMPROC ; i++)
+          {
+              if (i==RANK) continue;
+              //socket descriptor
+              sd = clientFd[i];
+              //if valid socket descriptor then add to read list
+              if(sd > 0 && ackArr[i] == 0)
+                FD_SET(sd , &readfds);
+
+              //highest file descriptor number, need it for the select function
+              if(sd > MAXCLIENTFD)
+                MAXCLIENTFD = sd;
+          }
+
+          activity = select(MAXCLIENTFD + 1 , &readfds , NULL , NULL , NULL);
+
+          for ( i = 0 ; i < NUMPROC ; i++)
+          {
+              if (ackArr[i] == 1) continue;
+
+              //socket descripto
+              sd = clientFd[i];
+
+              if (FD_ISSET(sd , &readfds)){
+                  read(sd, readArr, sizeof(msgArr)/sizeof(char));
+                  numAck += 1;
+                  ackArr[i] = 1;
+              }
+          }
+
+          if (numAck == NUMPROC) break;
+      }
+
+
+
+      for (int i = 0; i < NUMPROC; i++){
+          if (i == RANK) continue;
+          int k = write(serverFd[i], msgArr, sizeof(msgArr)/sizeof(char));
+          if (k <= 0) {
+            wait(2);
+            i--;
+          }
+      }
+
+      wait(2);
+  }
+
+  else{
+
+      while(1){
+          int errSend = write(serverFd[0], msgArr, sizeof(msgArr)/sizeof(char));
+          if(errSend <= 0){
+            wait(2);
+          }
+          else {
+            break;
+          }
+      }
+
+      while(1){
+          int errRcv = read(clientFd[0], readArr, sizeof(readArr)/sizeof(char));
+          if(errRcv <= 0 && errno == ETIMEDOUT){
+            wait(2);
+          }
+          else {
+            break;
+          }
+      }
+  }
+
+
 }
 
 int main(int argc, char **argv){
 
-    int rank = 0;
-    int numproc = 0;
-    int MAXCLIENTFD = 0;
-    memset(clientFd, 0,  MAXCONNECT);
-    memset(serverFd, 0,  MAXCONNECT);
+    int rank;
+    int numproc;
 
     MPI_Init(argc, argv, &rank, &numproc);
 
+    char msgPtr[65];
+    char rcvPtr[65];
+
+    memset(rcvPtr, 'L', 64*sizeof(char));
+    rcvPtr[64] = '\0';
+
+    if (rank%2 == 0){
+      memset(msgPtr, 'E', 64*sizeof(char));
+      msgPtr[64] = '\0';
+      MPI_Sendrecv(&msgPtr, 65, 1, rank+1, 1, &rcvPtr, 65, 1, rank+1, 1);
+    }
+    else{
+      memset(msgPtr, 'O', 64*sizeof(char));
+      msgPtr[64] = '\0';
+      MPI_Sendrecv(&msgPtr, 65, 1, rank-1, 1, &rcvPtr, 65, 1, rank-1, 1);
+    }
+
     MPI_Finalize();
 
-    // int i;
-    // for (i=0; i<NUMPROC; i++) {
-    //      printf("Node: %s, Rank %d\n", nodeNames[i], RANK);
-    // }
 
 }
