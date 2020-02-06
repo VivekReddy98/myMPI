@@ -1,5 +1,7 @@
 #! /bin/bash
 
+# vkarri Vivek Reddy Karri
+
 NP=$1 # Number of Processes
 
 CMD=$2  # The Name of the executable.

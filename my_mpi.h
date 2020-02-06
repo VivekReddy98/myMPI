@@ -1,4 +1,8 @@
 
+/*
+vkarri Vivek Reddy Karri
+*/
+
 /* --------------------Define  Constants here ----------------*/
 #ifndef MAXCONNECT
 #define MAXCONNECT 16
@@ -81,14 +85,14 @@ extern int CLIENTSTART;
 
 /* --------------------Function Declarations here --------------- */
 /* Helper Functions */
-void error(const char *msg);
+void error(const char *msg); // Print an error
 void fileAsArray(char *filename, int numLines); // To read stuff from a line
-void printtIP(struct hostent* host);
+void printtIP(struct hostent* host); // Get Ip Address from the rank
 struct sockaddr_in getServerAddr(int rank);
-void startServer(struct sockaddr_in serv_addr);
+void startServer(struct sockaddr_in serv_addr); // Start the server by listening for connections.
 int getRankFromIPaddr(struct sockaddr_in *serv_addr); // To get the rank of the connection from a recieved Node.
-void shutdownServer();
-void shutdownClient();
+void shutdownServer(); // Close all the sockets in the array with client fd's
+void shutdownClient(); // Close all the sockets in the arry with server fd's.
 
 /* Core MPI Functions */
 int MPI_Init(int argc, char **argv, int *rank, int *numproc);

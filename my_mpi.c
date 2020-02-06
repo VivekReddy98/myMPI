@@ -1,3 +1,7 @@
+/*
+vkarri Vivek Reddy Karri
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,16 +15,15 @@
 #include <errno.h>
 #include "my_mpi.h"
 
+// Global Variables and the constants //
+
 char nodeNames[MAXCONNECT][NODE_NAME_LEN];
 int RANK;
 int NUMPROC;
 int MAXCLIENTFD;
 char nameFILE[NODE_NAME_LEN];
 
-//char sysBuffer[BUFFSIZE];
-
 pthread_t server_thread, client_thread;
-
 
 int clientFd[MAXCONNECT]; // Used by Server
 int serverFd[MAXCONNECT]; // Used by the Client
@@ -53,11 +56,11 @@ int MPI_Init(int argc, char **argv, int *rank, int *numproc) {
   int server_sockfd;
   fileAsArray(nameFILE, NUMPROC); // To load names of the nodes into an array
 
-  struct sockaddr_in serv_addr;
-  serv_addr = getServerAddr(RANK);
+  struct sockaddr_in serv_addr = getServerAddr(RANK);
 
-  startServer(serv_addr); // Server Starts Listening. // Non-Blocking call so control returns immediately.
+  startServer(serv_addr); // Server Starts Listening. // Non-Blocking call so control returns without getting stuck.
 
+  /* This is essentially establishing connections */
   if (RANK%2 == 0){
       if(pthread_create(&server_thread , NULL , server_connection_handler , NULL) < 0) error("Could Not create Server Thread");
       //pthread_detach(server_thread);
@@ -77,8 +80,11 @@ int MPI_Init(int argc, char **argv, int *rank, int *numproc) {
   else{
       client_connection_handler(NULL, 1);
   }
+  /* looks weird right, could have done it without the if-else */
 
   void * ptr = NULL;
+
+  // Blocking Statement to let the server complete its execution.
   pthread_join(server_thread, &ptr);
 
   fflush(stdout);
@@ -86,6 +92,7 @@ int MPI_Init(int argc, char **argv, int *rank, int *numproc) {
   return 0;
 }
 
+// Read the description specified in the README and this should be clear for you.
 int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, int tag, char *recvbuf, int recvcount, int recv_sizeofDtype, int source, int recvtag){
 
     SERVERACK = 0;
@@ -104,12 +111,6 @@ int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, i
 
     numWrite = write(serverFd[dest], sendbuf, sendcount);
     if (numWrite <= 0) {error("Error in Writing to the socket!!!\n");}
-    else if (numWrite < sendcount) {
-       numBytesSent += numWrite;
-       wait(0.000001);
-       //printf("Not all the bytes have been written, requested for %d, but could only able to send %d\n", sendcount, numWrite);
-    }
-    //break;
 
     pthread_mutex_lock(&m_server_sync);
     while(SERVERACK == 0){
@@ -138,6 +139,7 @@ int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, i
     return 0;
 }
 
+// Read the description specified in the README and this should be clear for you.
 int MPI_Finalize() {
   MPI_Barrier();
   shutdownServer();
@@ -145,6 +147,7 @@ int MPI_Finalize() {
   return 0;
 }
 
+// Read the description specified in the README and this should be clear for you.
 int MPI_Barrier(){
 
   char readArr[] = ACK;
@@ -230,36 +233,4 @@ int MPI_Barrier(){
 
         int errRecv = read(clientFd[0], msgArr, ACK_SIZE);
   }
-
-  //printf("Barrier has been Crossed by Node %d\n", RANK);
-
 }
-
-// int main(int argc, char **argv){
-//
-//     int rank;
-//     int numproc;
-//
-//     MPI_Init(argc, argv, &rank, &numproc);
-//
-//     char msgPtr[65];
-//     char rcvPtr[65];
-//
-//     memset(rcvPtr, 'L', 64*sizeof(char));
-//     rcvPtr[64] = '\0';
-//
-//     if (rank%2 == 0){
-//       memset(msgPtr, 'E', 64*sizeof(char));
-//       msgPtr[64] = '\0';
-//       MPI_Sendrecv(&msgPtr, 65, 1, rank+1, 1, &rcvPtr, 65, 1, rank+1, 1);
-//     }
-//     else{
-//       memset(msgPtr, 'O', 64*sizeof(char));
-//       msgPtr[64] = '\0';
-//       MPI_Sendrecv(&msgPtr, 65, 1, rank-1, 1, &rcvPtr, 65, 1, rank-1, 1);
-//     }
-//
-//     MPI_Finalize();
-//
-//
-// }

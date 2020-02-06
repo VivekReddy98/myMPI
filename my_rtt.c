@@ -1,5 +1,6 @@
-// Single Author info:
-// vkarri Vivek Reddy Karri
+/*
+vkarri Vivek Reddy Karri
+*/
 
 #include <stdio.h>
 #include <stdlib.h>

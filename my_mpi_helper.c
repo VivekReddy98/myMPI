@@ -1,3 +1,7 @@
+/*
+vkarri Vivek Reddy Karri
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +32,7 @@ void printtIP(struct hostent* host){
   printf("\n");
 }
 
+// Converts the Nodelist.tx into a string array of node names.
 void fileAsArray(char *filename, int numLines) {
     if (numLines >= MAXCONNECT){
       fprintf(stderr, "Num Nodes Exceeded your Limit, Consider changing the size of the array!\n");
@@ -51,6 +56,7 @@ void fileAsArray(char *filename, int numLines) {
     fclose(fp);
 }
 
+// Names should be good enough as to what they are doing
 struct sockaddr_in getServerAddr(int rk){
   /* Server SetUp Code */
   struct hostent* host;
@@ -84,6 +90,7 @@ void startServer(struct sockaddr_in serv_addr){
   listen(clientFd[RANK], MAXCONNECT-1);
 }
 
+// This is required cause when a connection is made, i dont know which rank the node is of. This is for that purpose.
 int getRankFromIPaddr(struct sockaddr_in *serv_addr){
 
     char recievedIP[INET_ADDRSTRLEN];
@@ -254,6 +261,8 @@ void *server_connection_handler(void *ptr) {
     //pthread_exit(NULL);
 }
 
+
+// This is the server thread which is invoked if the MPI_Sendrecv IS USED.
 void *server_listen_fd(void *ind){
 
     IndexStore* in = (IndexStore *)ind;
