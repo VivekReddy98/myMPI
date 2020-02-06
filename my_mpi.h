@@ -77,11 +77,8 @@ extern int SERVERACK;
 extern int CLIENTSTART;
 
 
-//extern char sysBuffer[BUFFSIZE];
 /* --------------------------------------------------------------- */
 
-
-/* --------------------Function Declarations here --------------- */
 /* --------------------Function Declarations here --------------- */
 /* Helper Functions */
 void error(const char *msg);

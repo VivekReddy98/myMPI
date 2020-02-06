@@ -96,8 +96,6 @@ int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, i
 
     IndexStore ind = {source, recvbuf, recvcount};
 
-    //printf("\n%d, %d, %d\n", ind.src, ind.recvcount, RANK);
-
     if(pthread_create(&server_thread , NULL , server_listen_fd , (void *)&ind) < 0) error("Could Not create Server Thread");
 
     //printf("Number Bytes Written is %d\n", sendcount);
@@ -105,27 +103,6 @@ int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, i
     int numBytesSent = 0;
 
     int numWrite;
-
-    // while(1)
-    // {
-    //   if (sendcount > MSG_SIZE){
-    //     numWrite = write(serverFd[dest], sendbuf+numBytesSent, MSG_SIZE);
-    //     if (numWrite <= 0) {error("Error in Writing to the socket!!!\n");}
-    //     else if (numWrite < sendcount) {
-    //        numBytesSent += numWrite;
-    //        wait(0.000001);
-    //        //printf("Not all the bytes have been written, requested for %d, but could only able to send %d\n", sendcount, numWrite);
-    //     }
-    //     else{
-    //       break;
-    //       //printf("SUCCESS at Client Side: Written %d Bytes, Rank: %d\n", sendcount, RANK);
-    //       //fflush(stdout);
-    //       //printf("Message Sent Was %s", sendbuf);
-    //     }
-    //   }
-    //   else{
-    //   }
-    // }
 
     numWrite = write(serverFd[dest], sendbuf, sendcount);
     if (numWrite <= 0) {error("Error in Writing to the socket!!!\n");}
@@ -146,15 +123,11 @@ int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, i
 
     numWrite = write(serverFd[dest], ack, ACK_SIZE);
 
-    if (numWrite <= 0) {error("Error in Writing Acknoeledgement to the socket!!!\n");}
-    else if (numWrite < ACK_SIZE) {
+    if (numWrite <= 0 && errno != ECONNRESET) {error("Error in Writing Acknoeledgement to the socket!!!\n");}
+    else if (numWrite < ACK_SIZE && errno != ECONNRESET) {
        printf("Not all the bytes have been written, requested for %d, but could only able to send %d", sendcount, numWrite);
     }
-    // else{
-    //   //printf("SUCCESS at Client Side: Sent the Acknowledgement\n", sendcount, RANK);
-    //   //fflush(stdout);
-    //   //printf("Message Sent Was %s", sendbuf);
-    // }
+
 
     pthread_mutex_lock(&m_server_sync);
     CLIENTSTART = 1;
@@ -167,7 +140,8 @@ int MPI_Sendrecv(char *sendbuf, int sendcount, int send_sizeofDtype, int dest, i
     return 0;
 }
 
-int MPI_Finalize(){
+int MPI_Finalize() {
+  MPI_Barrier();
   shutdownServer();
   shutdownClient();
   return 0;
@@ -175,8 +149,8 @@ int MPI_Finalize(){
 
 int MPI_Barrier(){
 
-  char readArr[] = "!Proceed!";
-  char msgArr[] = "!Proceed!";
+  char readArr[] = ACK;
+  char msgArr[] = ACK;
 
   if (RANK == 0) {
 
@@ -192,6 +166,8 @@ int MPI_Barrier(){
       numAck = 1;
 
       ackArr[RANK] = 1;
+
+      int timer = 0;
 
       while(1)
       {
@@ -224,52 +200,40 @@ int MPI_Barrier(){
               sd = clientFd[i];
 
               if (FD_ISSET(sd , &readfds)){
-                  read(sd, readArr, sizeof(msgArr)/sizeof(char));
+                  read(sd, readArr, ACK_SIZE);
                   numAck += 1;
                   ackArr[i] = 1;
               }
           }
 
+          for ( i = 0 ; i < NUMPROC ; i++)
+          {
+              if (i == RANK) continue;
+
+              //socket descripto
+              sd = serverFd[i];
+
+              write(sd, msgArr, ACK_SIZE);
+          }
+
+          timer++;
+
+          if (timer > 10){
+            break;
+          }
+
           if (numAck == NUMPROC) break;
       }
 
-
-
-      for (int i = 0; i < NUMPROC; i++){
-          if (i == RANK) continue;
-          int k = write(serverFd[i], msgArr, sizeof(msgArr)/sizeof(char));
-          if (k <= 0) {
-            wait(2);
-            i--;
-          }
-      }
-
-      wait(2);
   }
 
   else{
+        int errSend = write(serverFd[0], msgArr, ACK_SIZE);
 
-      while(1){
-          int errSend = write(serverFd[0], msgArr, sizeof(msgArr)/sizeof(char));
-          if(errSend <= 0){
-            wait(2);
-          }
-          else {
-            break;
-          }
-      }
-
-      while(1){
-          int errRcv = read(clientFd[0], readArr, sizeof(readArr)/sizeof(char));
-          if(errRcv <= 0 && errno == ETIMEDOUT){
-            wait(2);
-          }
-          else {
-            break;
-          }
-      }
+        int errRecv = read(clientFd[0], msgArr, ACK_SIZE);
   }
 
+  //printf("Barrier has been Crossed by Node %d\n", RANK);
 
 }
 

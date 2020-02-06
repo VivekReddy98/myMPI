@@ -190,7 +190,7 @@ void *server_connection_handler(void *ptr) {
     // Clear FD_Sets;
     FD_ZERO(&readfds);
 
-      FD_SET(clientFd[RANK], &readfds);
+    FD_SET(clientFd[RANK], &readfds);
 
     MAXCLIENTFD = clientFd[RANK];
 
@@ -250,9 +250,6 @@ void *server_connection_handler(void *ptr) {
 
     }
 
-    //printf("ALL Client Connections have establihsed:, Rank %d server sleeping for now\n", RANK);
-    //free(client_message);
-    //close(accept_sockfd);
     return NULL;
     //pthread_exit(NULL);
 }
@@ -313,13 +310,6 @@ void *server_listen_fd(void *ind){
     pthread_mutex_unlock(&m_server_sync);
 
     i = read(fd, rcvBuff, ACK_SIZE);
-
-    //printf("%s\n", rcvBuff);
-    //
-    // if (i > ACK_SIZE){
-    //     printf("Acknowledgement Recieved!! Aborting the execution \n");
-    //     fflush(stdout);
-    // }
 
     pthread_exit(NULL);
 }
