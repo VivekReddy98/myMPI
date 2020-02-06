@@ -71,8 +71,6 @@ int MPI_Init(int argc, char **argv, int *rank, int *numproc) {
       client_connection_handler(NULL, 0);
   }
 
-
-
   if(RANK%2 == 0){
       client_connection_handler(NULL, 0);
   }
