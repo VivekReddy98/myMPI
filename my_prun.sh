@@ -1,6 +1,8 @@
 #! /bin/bash
 
-CMD=$1  # The Name of the executable.
+NP=$1 # Number of Processes
+
+CMD=$2  # The Name of the executable.
 
 CWD=${PWD}
 
@@ -18,10 +20,6 @@ NP=$(wc -l < $NODEFILE)
 for currNode in `cat $NODEFILE`; do
   ssh -n $currNode "killall -9 $CMD" &
 done
-
-
-echo $CWD
-echo $NODEFILE
 
 # For each item in the nodefile, connect via ssh and run the cmd.
 rank=0
