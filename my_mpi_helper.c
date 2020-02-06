@@ -110,10 +110,8 @@ int getRankFromIPaddr(struct sockaddr_in *serv_addr){
 void shutdownServer(){
     int i;
     for (i = 0; i< NUMPROC; i++){
-       if(i==RANK) continue;
        close(clientFd[i]);
     }
-    close(clientFd[RANK]);
 }
 
 void shutdownClient(){
@@ -126,12 +124,6 @@ void shutdownClient(){
 }
 
 void *client_connection_handler(void *ptr, int odd) {
-
-  pthread_mutex_lock(&m_server_sync);
-  while(CLIENTSTART == 0){
-       pthread_cond_wait(&cv_server_sync, &m_server_sync);
-  }
-  pthread_mutex_unlock(&m_server_sync);
 
   int rank_server = 0;
   int offset = 2;
@@ -163,13 +155,14 @@ void *client_connection_handler(void *ptr, int odd) {
       }
       else{
         //printf("Connected to server, socket fd is %d , ip is : %s , port : %d, Rank: %d\n" , clientFd[rank_server] , inet_ntoa(serv_addr.sin_addr) , ntohs(serv_addr.sin_port), RANK);
+        //
         break;
       }
       sleep(1);
       limit++;
-      if(limit > 15){
-        printf("Connection with Server of the Node: %d did not happen at RANK: %d\n", rank_server, RANK);
-        //fflush(stdout);
+      if(limit > 10){
+        printf("Connection with Server of the Node: %d did not happen at RANK: %d", rank_server, RANK);
+        fflush(stdout);
         break;
       }
     }
@@ -207,7 +200,6 @@ void *server_connection_handler(void *ptr) {
 
     while(1){
 
-
       // Clear FD_Sets;
       FD_ZERO(&readfds);
 
@@ -230,11 +222,7 @@ void *server_connection_handler(void *ptr) {
     				MAXCLIENTFD = sd;
       }
 
-      pthread_mutex_lock(&m_server_sync);
-      CLIENTSTART = 1;
-      pthread_cond_signal(&cv_server_sync);
-      pthread_mutex_unlock(&m_server_sync);
-
+      //*CLIENTSTART = 1;
       activity = select( MAXCLIENTFD + 1 , &readfds , NULL , NULL , NULL);  // Wait indefinitely till some activity is found on the Master Socket.
 
       if (activity < 0)  perror("select error");
@@ -262,9 +250,6 @@ void *server_connection_handler(void *ptr) {
 
     }
 
-    printf("ALL Client Connections have establihsed:, Rank %d server sleeping for now\n", RANK);
-    //free(client_message);
-    //close(accept_sockfd);
     return NULL;
     //pthread_exit(NULL);
 }
@@ -287,14 +272,18 @@ void *server_listen_fd(void *ind){
 
     while(1) {
 
-        i = read(fd+numBytesRead, rcvBuff, recvcount);
+        i = read(fd, rcvBuff+numBytesRead, recvcount);
 
         if (i>0){
           recvcount -= i;
           numBytesRead += i;
           if (numBytesRead >= recvcount) {
-            printf("SUCESS: Was able to read %d bytes %d \n", numBytesRead, RANK);
+            //printf("SUCESS: Was able to read %d bytes %d \n", numBytesRead, RANK);
             break;
+          }
+          else{
+            numBytesRead += i;
+            wait(0.000001);
           }
         }
 
@@ -306,7 +295,7 @@ void *server_listen_fd(void *ind){
         }
     }
 
-    printf("Message Recieved Was: %s\n", rcvBuff);
+    //printf("Message Recieved Was: %s\n", rcvBuff);
     fflush(stdout);
 
     pthread_mutex_lock(&m_server_sync);
@@ -321,13 +310,6 @@ void *server_listen_fd(void *ind){
     pthread_mutex_unlock(&m_server_sync);
 
     i = read(fd, rcvBuff, ACK_SIZE);
-
-    printf("%s\n", rcvBuff);
-
-    if (i > ACK_SIZE){
-        printf("Acknowledgement Recieved!! Aborting the execution \n");
-        fflush(stdout);
-    }
 
     pthread_exit(NULL);
 }
