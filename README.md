@@ -1,7 +1,10 @@
 # myMPI
 Custom MPI library using Socket Programming and Multi-Threading in c.
 
-## MPI Funtions Implemented
+## MPI: 
+Message Passing Interface is a standard designed to use inter-processes communication across the compute nodes to achieve SIMD paralellism. References for Commercial Libraries: https://www.open-mpi.org/
+
+## MPI Funtions Implemented in this custom implementation.
 1) MPI_Init()
 2) MPI_Sendrecv()
 3) MPI_Finalize()
