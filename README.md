@@ -2,7 +2,7 @@
 Custom MPI library using Socket Programming and Multi-Threading in c.
 
 ## MPI: 
-Message Passing Interface is a standard designed to use inter-processes communication across the compute nodes to achieve SPMD paralellism. References for Commercial Libraries: https://www.open-mpi.org/
+Message Passing Interface is a standard designed to use inter-processes communication across the compute nodes to achieve SPMD paralellism. This is Widely used in High Performance Computing. References for Commercial Libraries: https://www.open-mpi.org/
 
 ## MPI Funtions Implemented in this custom implementation.
 1) MPI_Init()
