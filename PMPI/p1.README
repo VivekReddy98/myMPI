@@ -1,0 +1,20 @@
+vkarri Vivek Reddy Karri
+
+Q1. Describe the communication pattern. Where is most of the communication happening (number of calls)?
+
+Ans) The pattern clearly appears to be symmetric. Also the Send count is uniform, 
+     which is inferred through color and also looking at the matrix.dat file. 
+     Most of the communication is happening with the neighbouring process which can be seen through two bulky diagonals. 
+     Although, messages to self is permitted in MPI, it is not observed in our image i.e. no diagonal.
+     A pattern of communication can be seen with the process of (p+16 && p-16) and also (p+4 && p-4). 
+
+
+Q2. What symmetries do you expect to see for Send counts? Are these symmetries observed? Why or Why not?
+
+Ans) Send's appear to be two-way, i.e. every node is sending and also recieveing a message from thr node they are sending the message,
+     so the expeted symmetry is observed in the plot. 
+     Consecutive Even-Odd style messaging pattern is observed and is also expected because it is easy to comprehend and implement.
+     Self-Messaging pattern is not observed as they might have as well copy the values to the recieve buffers from thr send buffers.
+     Some sort of quadrant messaging style is also observed, i.e. every node sending messages to (p+16)mod64 th node. (64 / 4). 
+     Since, this is circular in nature, the symmetry is observed.
+     Similarly, (p+4)mod64 is also observed and is also circular and thus symmetry is observed.
