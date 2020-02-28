@@ -17,3 +17,8 @@ Message Passing Interface is a standard designed to use inter-processes communic
 4) Mutex Locks and Conditional Variables are used for synchronization among server thread and main thread.
 
 Note: Clear Instructions and results are found in p1.README file
+
+## MPI Profiling:
+1) PMPI Wrappers are Written to collect runtime statistics for MPI_Send and MPI_Isend functions.
+2) Profiling stats were collected for Kripke Particle Transport Code.
+3) Observation are presented in Kripke/PMPI.README
